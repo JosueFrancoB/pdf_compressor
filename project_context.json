@@ -1,0 +1,278 @@
+{
+    "project_name": "PDF Compressor Service",
+    "description": "Servicio web desarrollado en Python con Flask que permite comprimir archivos PDF usando Ghostscript con tres niveles de compresión diferentes",
+    "version": "1.0.0",
+    "created_date": "2024-01-01",
+    "last_updated": "2024-01-01T00:00:00Z",
+    "technology_stack": {
+        "backend": "Python 3.11",
+        "framework": "Flask",
+        "wsgi_server": "Gunicorn",
+        "pdf_compression": "Ghostscript",
+        "containerization": "Docker",
+        "orchestration": "Docker Compose"
+    },
+    "architecture": {
+        "type": "REST API",
+        "pattern": "Microservice",
+        "storage": "Temporary file system",
+        "concurrency": "Multi-worker with Gunicorn"
+    },
+    "compression_levels": {
+        "level_1": {
+            "name": "Prepress",
+            "settings": "/prepress",
+            "quality": "Very High",
+            "compression": "Moderate",
+            "use_case": "High-quality printing",
+            "ghostscript_command": [
+                "gs",
+                "-sDEVICE=pdfwrite",
+                "-dCompatibilityLevel=1.4",
+                "-dPDFSETTINGS=/prepress",
+                "-dNOPAUSE",
+                "-dQUIET",
+                "-dBATCH",
+                "-sOutputFile={output}",
+                "{input}"
+            ]
+        },
+        "level_2": {
+            "name": "Ebook",
+            "settings": "/ebook",
+            "quality": "High",
+            "compression": "Balanced",
+            "use_case": "E-books and web documents",
+            "ghostscript_command": [
+                "gs",
+                "-sDEVICE=pdfwrite",
+                "-dCompatibilityLevel=1.4",
+                "-dPDFSETTINGS=/ebook",
+                "-dNOPAUSE",
+                "-dQUIET",
+                "-dBATCH",
+                "-sOutputFile={output}",
+                "{input}"
+            ]
+        },
+        "level_3": {
+            "name": "Screen",
+            "settings": "/screen",
+            "quality": "Low",
+            "compression": "Maximum",
+            "use_case": "Screen viewing",
+            "ghostscript_command": [
+                "gs",
+                "-sDEVICE=pdfwrite",
+                "-dCompatibilityLevel=1.4",
+                "-dPDFSETTINGS=/screen",
+                "-dNOPAUSE",
+                "-dQUIET",
+                "-dBATCH",
+                "-sOutputFile={output}",
+                "{input}"
+            ]
+        }
+    },
+    "api_endpoints": {
+        "health_check": {
+            "method": "GET",
+            "path": "/health",
+            "description": "Verificar estado del servicio",
+            "response": {
+                "status": "healthy",
+                "service": "PDF Compressor",
+                "version": "1.0.0"
+            }
+        },
+        "compress": {
+            "method": "POST",
+            "path": "/compress",
+            "description": "Comprimir archivo PDF",
+            "parameters": {
+                "file": {
+                    "type": "multipart/form-data",
+                    "description": "Archivo PDF a comprimir",
+                    "required": true
+                },
+                "level": {
+                    "type": "form-data",
+                    "description": "Nivel de compresión (1, 2, 3)",
+                    "required": false,
+                    "default": "1"
+                }
+            },
+            "response": {
+                "success": true,
+                "message": "PDF comprimido exitosamente con nivel X",
+                "original_filename": "string",
+                "compressed_filename": "string",
+                "original_size_mb": "float",
+                "compressed_size_mb": "float",
+                "compression_ratio_percent": "float",
+                "file_id": "uuid"
+            }
+        },
+        "download": {
+            "method": "GET",
+            "path": "/download/<file_id>",
+            "description": "Descargar archivo comprimido",
+            "parameters": {
+                "file_id": {
+                    "type": "path",
+                    "description": "ID del archivo comprimido",
+                    "required": true
+                }
+            },
+            "response": "PDF file download"
+        },
+        "cleanup": {
+            "method": "POST",
+            "path": "/cleanup",
+            "description": "Limpiar archivos temporales",
+            "response": {
+                "success": true,
+                "message": "Se limpiaron X archivos temporales"
+            }
+        }
+    },
+    "file_structure": {
+        "app.py": {
+            "description": "Aplicación Flask principal",
+            "size": "6.8KB",
+            "lines": 181,
+            "key_functions": [
+                "compress_pdf()",
+                "compress_pdf_endpoint()",
+                "download_compressed_file()",
+                "cleanup_files()",
+                "health_check()"
+            ]
+        },
+        "requirements.txt": {
+            "description": "Dependencias de Python",
+            "dependencies": [
+                "Flask==2.3.3",
+                "Werkzeug==2.3.7",
+                "gunicorn==21.2.0"
+            ]
+        },
+        "Dockerfile": {
+            "description": "Configuración de Docker",
+            "base_image": "python:3.11-slim",
+            "system_dependencies": [
+                "ghostscript"
+            ],
+            "exposed_port": 5000,
+            "command": "gunicorn --bind 0.0.0.0:5000 --workers 2 app:app"
+        },
+        "docker-compose.yml": {
+            "description": "Orquestación de contenedores",
+            "services": [
+                "pdf-compressor"
+            ],
+            "ports": [
+                "5000:5000"
+            ],
+            "volumes": [
+                "./uploads:/tmp/uploads",
+                "./compressed:/tmp/compressed"
+            ]
+        },
+        "test_service.py": {
+            "description": "Script de pruebas",
+            "size": "4.8KB",
+            "lines": 144,
+            "test_functions": [
+                "test_health_check()",
+                "test_compress_pdf()",
+                "test_download()",
+                "test_cleanup()"
+            ]
+        },
+        "project_manager.py": {
+            "description": "Gestor del contexto del proyecto",
+            "size": "8.2KB",
+            "lines": 160,
+            "key_functions": [
+                "load_context()",
+                "update_context()",
+                "get_project_summary()",
+                "update_file_info()",
+                "add_endpoint()",
+                "update_compression_level()"
+            ],
+            "purpose": "Manejar automáticamente la lectura y actualización del project_context.json"
+        },
+        "README.md": {
+            "description": "Documentación completa",
+            "size": "4.7KB",
+            "sections": [
+                "Características",
+                "Instalación y Uso",
+                "API Endpoints",
+                "Niveles de Compresión",
+                "Desarrollo Local",
+                "Troubleshooting"
+            ]
+        }
+    },
+    "configuration": {
+        "max_file_size": "50MB",
+        "compression_timeout": "300 seconds",
+        "upload_folder": "/tmp/uploads",
+        "compressed_folder": "/tmp/compressed",
+        "allowed_extensions": [
+            "pdf"
+        ],
+        "cleanup_age": "3600 seconds (1 hour)"
+    },
+    "security_features": {
+        "file_validation": "PDF files only",
+        "filename_sanitization": "Secure filename handling",
+        "file_size_limits": "50MB maximum",
+        "timeout_protection": "5-minute compression timeout",
+        "automatic_cleanup": "Temporary file cleanup"
+    },
+    "deployment": {
+        "docker_compose": "docker-compose up --build",
+        "docker_build": "docker build -t pdf-compressor .",
+        "docker_run": "docker run -p 5000:5000 pdf-compressor",
+        "local_development": "python app.py"
+    },
+    "testing": {
+        "test_script": "python test_service.py",
+        "test_file": "test.pdf",
+        "test_levels": [
+            1,
+            2,
+            3
+        ],
+        "health_check_url": "http://localhost:5000/health"
+    },
+    "monitoring": {
+        "logging": "Detailed logging for uploads, compression, errors",
+        "metrics": "Compression ratios, file sizes, processing times",
+        "health_check": "Automatic health monitoring endpoint"
+    },
+    "development_notes": {
+        "linter_errors": "Flask and Werkzeug imports show errors until dependencies are installed",
+        "ghostscript_requirement": "Must be installed in Docker container",
+        "file_handling": "Temporary files are automatically cleaned up",
+        "error_handling": "Comprehensive error handling with detailed logging",
+        "context_management": "Project context is automatically managed via project_manager.py",
+        "last_development_session": "2024-01-01T00:00:00Z",
+        "current_focus": "Context management system implementation",
+        "next_milestone": "Add authentication and authorization"
+    },
+    "future_enhancements": [
+        "Add authentication and authorization",
+        "Implement file format validation",
+        "Add compression progress tracking",
+        "Implement batch processing",
+        "Add compression quality metrics",
+        "Implement caching for repeated compressions",
+        "Add API rate limiting",
+        "Implement webhook notifications"
+    ]
+}
