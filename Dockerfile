@@ -15,8 +15,10 @@ COPY requirements.txt .
 # Instalar dependencias de Python
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copiar código de la aplicación
+# Copiar código de la aplicación y config.json y doc.yml
 COPY app.py .
+COPY config.json .
+COPY doc.yml .
 
 # Crear directorios necesarios
 RUN mkdir -p /tmp/uploads /tmp/compressed

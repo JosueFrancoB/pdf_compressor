@@ -1,0 +1,7 @@
+{
+    "port": 5000,
+    "allowed_extensions": [
+        "pdf"
+    ],
+    "max_file_size_mb": 50
+}

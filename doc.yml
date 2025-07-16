@@ -1,0 +1,189 @@
+openapi: 3.0.0
+info:
+  title: PDF Compressor API
+  version: 1.0.0
+  description: |
+    API para comprimir archivos PDF en tres niveles de compresión usando Ghostscript.
+    - Nivel 1: Alta calidad (prepress)
+    - Nivel 2: Calidad media (ebook)
+    - Nivel 3: Calidad baja (screen)
+    ---
+    Desarrollado por CBIN.
+
+servers:
+  - url: http://localhost:5000
+    description: Servidor local
+
+tags:
+  - name: Health
+    description: Verificación de estado del servicio
+  - name: PDF
+    description: Compresión y descarga de archivos PDF
+  - name: Limpieza
+    description: Limpieza de archivos temporales
+
+paths:
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Verifica el estado del servicio
+      responses:
+        '200':
+          description: Servicio activo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /compress:
+    post:
+      tags:
+        - PDF
+      summary: Comprime un archivo PDF
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Archivo PDF a comprimir
+                level:
+                  type: integer
+                  description: Nivel de compresión (1, 2 o 3)
+                  default: 1
+      responses:
+        '200':
+          description: PDF comprimido exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompressResponse'
+        '400':
+          description: Error en la solicitud
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /download/{file_id}:
+    get:
+      tags:
+        - PDF
+      summary: Descarga un PDF comprimido
+      parameters:
+        - name: file_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID del archivo comprimido
+      responses:
+        '200':
+          description: Archivo PDF comprimido
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Archivo no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /cleanup:
+    post:
+      tags:
+        - Limpieza
+      summary: Elimina archivos comprimidos temporales antiguos
+      responses:
+        '200':
+          description: Limpieza exitosa
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CleanupResponse'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: healthy
+        service:
+          type: string
+          example: PDF Compressor
+        version:
+          type: string
+          example: 1.0.0
+
+    CompressResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: PDF comprimido exitosamente con nivel 2
+        original_filename:
+          type: string
+          example: documento.pdf
+        compressed_filename:
+          type: string
+          example: compressed_level_2_documento.pdf
+        original_size_mb:
+          type: number
+          example: 5.2
+        compressed_size_mb:
+          type: number
+          example: 2.1
+        compression_ratio_percent:
+          type: number
+          example: 59.62
+        file_id:
+          type: string
+          example: 123e4567-e89b-12d3-a456-426614174000
+
+    CleanupResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Se limpiaron 3 archivos temporales
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          example: No se proporcionó ningún archivo 

@@ -1,31 +1,53 @@
+import json
 import os
 import subprocess
-import tempfile
 import uuid
+from flask_cors import CORS
 from flask import Flask, request, jsonify, send_file
 from werkzeug.utils import secure_filename
 import logging
+import threading
+import time
 
 # Configuración de logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+with open('config.json', 'r') as f:
+    config = json.load(f)
+
+if not config:
+    logger.error('\033[91mconfig.json is not valid\033[0m')
+    exit(1)
+
+if not config.get('port'):
+    # warning in yellow
+    logger.warning('\033[93mPort is not set in config.json, using default port 5000\033[0m')
+if not config.get('max_file_size_mb'):
+    logger.warning('\033[93mMax file size is not set in config.json, using default max file size 50MB\033[0m')
+if not config.get('allowed_extensions'):
+    logger.warning('\033[93mAllowed extensions are not set in config.json, using default allowed extensions [pdf]\033[0m')
+
 app = Flask(__name__)
-app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB max file size
+app.config['MAX_CONTENT_LENGTH'] = config.get('max_file_size_mb', 50) * 1024 * 1024  # 50MB max file size
+# redoc = Redoc(app, 'doc.yml')  # Eliminado
+cors = CORS(app, resources={r"/*":{'origins':"*"}})
 
 # Configuración de directorios
 UPLOAD_FOLDER = '/tmp/uploads'
 COMPRESSED_FOLDER = '/tmp/compressed'
-ALLOWED_EXTENSIONS = {'pdf'}
+ALLOWED_EXTENSIONS = config.get('allowed_extensions', ['pdf'])
 
 # Crear directorios si no existen
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(COMPRESSED_FOLDER, exist_ok=True)
 
+
+
 def allowed_file(filename):
     """Verificar si el archivo tiene una extensión permitida"""
     return '.' in filename and \
-           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+        filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def compress_pdf(input_path, output_path, level):
     """Comprimir PDF usando Ghostscript con diferentes niveles"""
@@ -177,5 +199,47 @@ def cleanup_files():
         logger.error(f"Error en limpieza: {str(e)}")
         return jsonify({'error': f'Error en limpieza: {str(e)}'}), 500
 
+def cleanup_files_periodically():
+    """Limpia archivos temporales cada 2 horas en segundo plano"""
+    while True:
+        try:
+            logger.info("Limpieza automática de archivos temporales iniciada")
+            current_time = time.time()
+            cleaned_count = 0
+            for filename in os.listdir(COMPRESSED_FOLDER):
+                file_path = os.path.join(COMPRESSED_FOLDER, filename)
+                if os.path.getctime(file_path) < (current_time - 3600):  # 1 hora
+                    os.remove(file_path)
+                    cleaned_count += 1
+            if cleaned_count > 0:
+                logger.info(f"Limpieza automática: Se limpiaron {cleaned_count} archivos temporales")
+        except Exception as e:
+            logger.error(f"Error en limpieza automática: {str(e)}")
+        time.sleep(7200)  # Esperar 2 horas (ajusta a 7200 para producción)
+
+# Lanzar el hilo de limpieza automática SIEMPRE, incluso bajo Gunicorn
+cleanup_thread = threading.Thread(target=cleanup_files_periodically, daemon=True)
+cleanup_thread.start()
+
+@app.route('/openapi.yml')
+def openapi_spec():
+    return send_file('doc.yml', mimetype='text/yaml')
+
+@app.route('/docs')
+def redoc_ui():
+    return '''
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>API Docs</title>
+        <meta charset="utf-8"/>
+        <script src="https://cdn.jsdelivr.net/npm/redoc@next/bundles/redoc.standalone.js"></script>
+      </head>
+      <body>
+        <redoc spec-url='/openapi.yml'></redoc>
+      </body>
+    </html>
+    '''
+
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=False) 
+    app.run(host='0.0.0.0', port=config.get('port', 5000), debug=False)
